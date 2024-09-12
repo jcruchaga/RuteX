@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="static/css/style.css">
-    <title>RuteX v05.04</title>
+    <title>RuteX</title>
 </head>
 <body>
     <h1>Powered by Rutex v05.04</h1><hr>

@@ -4,7 +4,7 @@ namespace rutex;
 use mysqli;
 use Exception;
 
-const MODEL_VERSION = "2.5";
+const MODEL_VERSION = "2.7";
 
 class Model {
 
@@ -49,18 +49,26 @@ class Model {
                 // $this->dbconn->set_charset("utf8");
 
             } catch(Exception $e) {
+                //Mostrar mensaje en pantalla (por si están deshabilitados los warnings en php.ihi)
                 die(htmlError("500", "Falló la conexión a la base de datos"));
-                //throw new Exception("Falló la conexión a la base de datos. ErrMsg:{$e->getMessage()}");
             }
         }
     }
 
+    function commit() {
+        return $this->dbconn->commit();
+    }
+
+    function rollBack() {
+        return $this->dbconn->rollBack();
+    }
+
     //OBSERVABILIDAD
-    function viewSelectCmd($fields="*", $page=0, $rows=16) {
+    function viewSelectCmd($fields="*", $page=0, $rows=0) {
         return $this->makeSelectCmd($fields, $page, $rows);
     }
 
-    private function result($success, $content) {
+    private function setResult($success, $content) {
         $this->result = ["success"=>$success, "content"=>$content];
     }
 
@@ -89,8 +97,8 @@ class Model {
 
         $verified = empty($requiredFields);
 
-        if ($verified) $this->result(true, "Todos los campos obligatorios están cargados");
-        else           $this->result(false, "Faltan datos obligatorios: " . implode(", ", $requiredFields));
+        if ($verified) $this->setResult(true , "Todos los campos obligatorios están cargados");
+        else           $this->setResult(false, "Faltan datos obligatorios: " . implode(", ", $requiredFields));
 
         return $verified;
     }
@@ -108,7 +116,6 @@ class Model {
             $this->condition[] = $this->orCondition;
             $this->orCondition = [];
         }
-
 
         $strcond = "";
         $and     = "";
@@ -135,7 +142,7 @@ class Model {
         return $strcond;
     }
 
-    private function makeSelectCmd($fields="*", $page=0, $rows=16) {
+    private function makeSelectCmd($fields="*", $page=0, $rows=0) {
         $whereCondition = $this->getWhereCondition();
 
         if (empty($fields)) $fields = "*";
@@ -187,8 +194,11 @@ class Model {
 //        return $this->query("select * from {$this->table}")->getCursor();
     }
 
-
     //Armado de condicion de búsqueda
+    function whereEQ(string $field, string $value) {
+        return $this->where($field, "=", $value);
+    }
+
     function where(string $field, string $op, string $value) {
         $this->condition   = [];
         $this->orCondition = [[$field, $op, $value]];
@@ -218,8 +228,13 @@ class Model {
         $this->orderBy = $orderBy;
         return $this;
     }
+    
+    function select($fields="*", $page=0, $rows=0) {
+        $sqlcmd = $this->makeSelectCmd($fields, $page, $rows);
+        return $this->query($sqlcmd);
+    }
 
-    function totPages($rows=16) {
+    function totPages($rows=0) {
         $whereCondition = $this->getWhereCondition();
         if (empty($whereCondition)) $sqlcmd= "select count(*) as reccount from {$this->table}";
         else $sqlcmd= "select count(*) as reccount from {$this->table} where {$whereCondition}";
@@ -227,11 +242,6 @@ class Model {
         $this->query($sqlcmd);
         $reccount = $this->cursor->fetch_assoc()["reccount"];
         return ceil($reccount / $rows);
-    }
-    
-    function select($fields="*", $page=0, $rows=16) {
-        $sqlcmd = $this->makeSelectCmd($fields, $page, $rows);
-        return $this->query($sqlcmd);
     }
 
     function getPage($page=0, $rows=16) {
@@ -277,12 +287,12 @@ class Model {
 
             $this->getById($insert_id);
 
-            $this->result(true, $this->current);
+            $this->setResult(true, $this->current);
             return true;
 
         } catch (Exception $e) {
             if ($this->sqlVerbose) throw new Exception("ERROR on sql insert => {$e->getMessage()}");
-            $this->result(false, $e->getMessage());
+            $this->setResult(false, $e->getMessage());
             return false;
         }
     }
@@ -302,7 +312,7 @@ class Model {
         }
 
         if (empty($fields)) {
-            $this->result(false, "No hay campos para reemplazar");
+            $this->setResult(false, "No hay campos para reemplazar");
             return false;
         }
 
@@ -314,12 +324,12 @@ class Model {
 
             //recupera el registro recien actualizado
             $this->getById($id);
-            $this->result(true, $this->current);
+            $this->setResult(true, $this->current);
             return true;
 
         } catch (Exception $e) {
             if ($this->sqlVerbose) throw new Exception("ERROR on sql update => {$e->getMessage()}");
-            $this->result(false, $e->getMessage());
+            $this->setResult(false, $e->getMessage());
             return false;
         }
     }
@@ -328,8 +338,8 @@ class Model {
         $id= $this->dbconn->real_escape_string($id);
         $this->query("delete from {$this->table} where id=$id");
 
-        if ($this->affected_rows()>0) $this->result(true, "Registro Eliminado OK.");
-        else $this->result(false, "NO se eliminaron registros");
+        if ($this->affected_rows()>0) $this->setResult(true, "Registro Eliminado OK.");
+        else $this->setResult(false, "NO se eliminaron registros");
 
         return ($this->success());
     }
