@@ -31,7 +31,7 @@ class Route {
 
         self::$routes[$method][$uri]["callback"]   = $callback;
         self::$routes[$method][$uri]["isframeset"] = $isFrameset;
-        self::$routes[$method][$uri]["folder"]     = (empty($folder))?$uri:$folder;
+        //self::$routes[$method][$uri]["folder"]     = (empty($folder))?$uri:$folder;
 
         //Frameset necesita el folder para encontrar frameset.php
         //sino cargar el parametro real que será utilizado en doCallback() para encontrar el script

@@ -4,7 +4,7 @@ namespace rutex;
 use mysqli;
 use Exception;
 
-const MODEL_VERSION = "2.7";
+const MODEL_VERSION = "2.7.1";
 
 class Model {
 
@@ -14,14 +14,14 @@ class Model {
     //inherited al instanciar clase que hereda de Model, ej: User.php
     //Por defecto usa el datastore "default", eso se puede modificar en la clase de la entidad
     //Por ejemplo agregando: protected $datastore = "legacy"; y creando el archivo app/config/datastores/legacy.php
-    protected $dbcfg, $table, $struct, $sqlVerbose, $datastore= "default";
+    protected $dbcfg, $table, $struct=[], $sqlVerbose, $datastore= "default";
 
     private $result, $record;
 
     public $current;
 
     //variables usadas para armar la condicion del Where
-    protected $condition= [], $orCondition= [], $orderBy="";
+    protected $condition=[], $orCondition=[], $orderBy="";
 
     static function version() {return MODEL_VERSION;}
 
@@ -81,8 +81,8 @@ class Model {
     }
 
     private function BlankFields() {
-        foreach($this->struct as $fieldName => $required) {
-            $this->{$fieldName} = "";
+        foreach($this->struct as $fieldName => $def) {
+            $this->struct[$fieldName]["_value"] = "";
         }
     }
 
@@ -90,9 +90,9 @@ class Model {
         $this->record   = [];
         $requiredFields = [];
 
-        foreach($this->struct as $fieldName => $required) {
+        foreach($this->struct as $fieldName => $def) {
             if (isset($data[$fieldName]) && $data[$fieldName]) $this->record[$fieldName] = $data[$fieldName];
-            else if ($required) $requiredFields[] = $fieldName;
+            else if ($def["required"]) $requiredFields[] = $fieldName;
         }
 
         $verified = empty($requiredFields);
@@ -170,10 +170,10 @@ class Model {
         $this->current = $this->cursor->fetch_assoc();
 
         if ($this->current) {
-            //Carga los campos en las variables de la entidad
-            foreach($this->struct as $fieldName => $required) {
-                if (isset($this->current[$fieldName])) 
-                   $this->{$fieldName} = $this->current[$fieldName];
+            //Carga los valores de los campos 
+            foreach($this->struct as $fieldName => $def) {
+                if (isset($this->current[$fieldName]))
+                    $this->struct[$fieldName]["_value"] = $this->current[$fieldName];
             }
         }
 
@@ -191,13 +191,27 @@ class Model {
 
     function getAll($fields="*") {
         return $this->select($fields)->getcursor();
-//        return $this->query("select * from {$this->table}")->getCursor();
     }
 
     //Armado de condicion de búsqueda
     function whereEQ(string $field, string $value) {
         return $this->where($field, "=", $value);
     }
+
+    // function addCondition($field, string $op=null, string $value=null) {
+    //     if ($value)         $this->orCondition[] = [$field, $op, $value];
+    //     elseif ($op)        $this->orCondition[] = [$field, "=", $value];
+    //     elseif (is_array($field)) {
+    //         if (is_array($field[0])) {
+    //             foreach($field as $item) {
+    //                 $this->condition[] = [$item];
+    //             }
+    //         }
+    //         else {
+    //             $this->condition[] = [[$field[0], $field[1], $field[2]]];
+    //         }
+    //     }
+    // }
 
     function where(string $field, string $op, string $value) {
         $this->condition   = [];
