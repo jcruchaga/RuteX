@@ -5,20 +5,23 @@ class <?=$className?>Controller extends BaseController {
     protected $className = "<?=$className?>";
 
     function index($parm) {
-        //acá accedemos a la base de datos hacemos controles etc.
-        //En $parm cargamos Los datos que queramos renderizar en la página
-        //Ej: $parm["title"] = "<?=$className?>";
+        //En $parm recibimos las variables del slug
+
+        //En esta función accedemos a la base de datos hacemos controles etc.
+
+        //En $var cargamos Las variables que queramos pasar a la página
+        //Ej: $var["title"] = "<?=$className?>";
 
 
         /* 
-            El contenido de $parm se expandirá en la página como variables independientes
-            Ej: Si se carga $parm["title"] = "Products" en la pagina existirá una variable $title
-            que podrá ser usada con el tag <?=$title?> 
+            El contenido de $var se pasará a la página como variables independientes
+            Ej: Si se carga $var["title"] = "<?=$className?>" en la pagina existirá una variable $title
+            que podrá ser usada dentro del html
         */
 
-        $parm["title"] = "<?=$className?>";
+        $var["title"] = "<?=$className?>";
         
-        //renderizar la página con los parámetros que están en $parm
-        return $this->view("<?=strtolower($className)?>/index", $parm);
+        //renderizar la página
+        return $this->view("<?=strtolower($className)?>/index", $var);
     }
 }

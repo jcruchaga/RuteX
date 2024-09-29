@@ -7,6 +7,6 @@
     <title><?=$title?></title>
 </head>
 <body>
-    <h2>Página renderizada por <?=$title?>Controller->index()</h2><hr>
+    <h2>Página devuelta por el controlador: <?=$title?>Controller</h2><hr>
 </body>
 </html>

@@ -1,5 +1,6 @@
 <?php 
     use rutex\Route;
+    require_once __DIR__ . "/utiles.php";
 
     //carga las variables de ambiente
     if (is_readable("../.env")) {
@@ -30,19 +31,29 @@
         else die("<h1>no se pudo cargar la clase $script ++ $className</h1>");
     });
 
-    require_once __DIR__ . "/utiles.php";
+    session_start();
+
+    //*** RUTAS MAGICAS (se configuran automaticamente aqui) ***
+    require_once "magic_routes.php";
 
     //Carga el archivo rutas de la app
+    //Si el usuario redefine las rutas magicas, serán SOBREESCRITAS con el valor indicado en web.php
+    //Esto se hace para permitir que el usuario modifique el comportamiento por defecto
     require_once "../app/web.php";
 
-    session_start();
+    //Procesar la ruta recibida
     Route::listen();
+
     return;
 
 
-    function framesController($parm) {
+    function FramesController($parm) {
+        //invocado cuando se crea una ruta Route::frameset("/uri", "folder");
+        //en "folder" debe haber un archivo "framset.php" con la configuracion de los frames 
+
         $path     = trim(strtolower(preg_replace("#\?(.*)#", "", $_SERVER["REQUEST_URI"])), "/");
-    
+
+        //El folder es obligatorio y fuè indicado al crear la ruta en web.php;
         $folder   = Route::$currentEntry["folder"];
         $frameset = (include "../app/views/$folder/frameset.php");
 
@@ -51,11 +62,6 @@
 
         $frame = $_GET["frame"] ?? "panel";
 
-        // if (!isset($_GET["frame"])) echo render("frameset", $frameset);
-        // elseif ($frame != "panel" || empty($request_uri)) echo view("$name/$frame", $parm);
-        // else redirect($request_uri);
-
-        if (!isset($_GET["frame"])) echo render("frameset", $frameset);
+        if (!isset($_GET["frame"])) echo renderLayout("frameset", $frameset);
         else echo view("$folder/$frame", $parm);
-
     }

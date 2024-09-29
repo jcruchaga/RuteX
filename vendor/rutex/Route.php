@@ -1,6 +1,8 @@
 <?php 
 namespace rutex;
 
+use DOMDocument;
+
 /** 
  * @author jcruchaga@zonafranja.com>
  * 
@@ -14,7 +16,7 @@ class Route {
 
     //function estanova() {}
     static private $routes = [];
-    static $lastEntry, $currentEntry;
+    static $magic_urls=[], $lastEntry, $currentEntry;
 
     static function version() {return ROUTE_VERSION;}
     static private function viewsFolder()   { return $_ENV["VIEWS_FOLDER"] ?? VIEWS_FOLDER; }
@@ -24,7 +26,7 @@ class Route {
     static function post    ($uri, $callback, $folder="") {self::add("POST"   , $uri, $callback         , $folder, false);}
     static function put     ($uri, $callback, $folder="") {self::add("PUT"    , $uri, $callback         , $folder, false);}
     static function delete  ($uri, $callback, $folder="") {self::add("DELETE" , $uri, $callback         , $folder, false);}
-    static function frameset($uri, $folder="")            {self::add("GET"    , $uri, "framesController", $folder, true) ;}
+    static function frameset($uri, $folder="")            {self::add("GET"    , $uri, "FramesController", $folder, true) ;}
 
     static private function add($method, $uri, $callback, $folder="", $isFrameset=false) {
         $uri = trim(strtolower($uri), '/');
@@ -48,10 +50,8 @@ class Route {
         $path    = trim(strtolower(preg_replace("#\?(.*)#", "", $_SERVER["REQUEST_URI"])), "/");
         $isPath  = false;
 
-        //El unico path permitido sin referer es "engine"
-        if ($path=="rutex.engine" && $method=="GET") {include "engine.php"; exit;}
-
-        if (!empty($path) && empty($_SERVER["HTTP_REFERER"]) && !getenv("ALLOW_URL_LINKS")) return header("location:/");
+        //verificar urls sin referer
+        if (!empty($path) && empty($_SERVER["HTTP_REFERER"]) && !getenv("ALLOW_URL_LINKS") && !in_array($path, self::$magic_urls)) return header("location:/");
 
         if (isset(self::$routes[$method])) {
             if (isset(self::$routes[$method][$path])) {
@@ -86,7 +86,16 @@ class Route {
             //Usado por funcion framesController para ubicar el folder del frameset
             self::$currentEntry = $routesEntry;
 
-            if (!$routesEntry["isframeset"]) $_SESSION["request_uri"] = $_SERVER["REQUEST_URI"];
+            //Mantener referer.
+            if (isset($_SERVER["HTTP_REFERER"])) $parm["referer"] = trim($_SERVER["HTTP_REFERER"],"/");
+
+            //Sobreescribir _referer cuando viene expresamente indicado en el request
+            if (isset($_POST["_referer"])) $parm["referer"] = $_POST["_referer"];
+            if (isset($_GET["_referer"]))  $parm["referer"] = $_GET ["_referer"];
+
+            //USUARIO LOGGEADO. User es un array asociativo que viene de conax
+            if (isset($_SESSION["user"])) $parm["user"] = $_SESSION["user"];
+
             $response = self::doCallback($routesEntry, $parm);
         }
         else $response = self::htmlError("404", "not found path:", "($method) " . preg_replace("#\?(.+)#", "", $_SERVER["REQUEST_URI"]));
@@ -95,11 +104,15 @@ class Route {
         exit;
     }
 
-    static function view($route, $parm = []) {
+    static function view($route, $__TMP_data = []) {
         $result = self::viewNameResolve($route);
         if ($result["success"]) {
             ob_start();
-            extract($parm);
+
+            //Evitar colisión de nombre del array con las variables expandidas 
+            extract($__TMP_data);
+            unset($__TMP_data);
+
             include $result["content"];
             return ob_get_clean();
         } 
@@ -113,6 +126,8 @@ class Route {
     static private function viewNameResolve($route) {
         //En Este framework TODOS los scripts son .php (insluso los html puros)
         //Los nombres de los scripts se indican SIN EXTENSION 
+        //DESCOMENTAR si se quieren buscar otras extensiones
+        
         $scriptBaseName = self::viewsFolder() . "/{$route}";
         if     (file_exists("$scriptBaseName.php"))  $scriptName = "$scriptBaseName.php";
         // elseif (file_exists("$scriptBaseName.html")) $scriptName = "$scriptBaseName.html";
@@ -120,7 +135,7 @@ class Route {
         elseif (file_exists("$route.php"))           $scriptName = "$route.php";
         // elseif (file_exists("$route.html"))          $scriptName = "$route.php";
         // elseif (file_exists($route))                 $scriptName = $route;
-        else   return self::result(false, "<h1>" . __FUNCTION__ . "() ERROR: Not found: {$route}</h1>");
+        else   return self::result(false, "<h1>" . __FUNCTION__ . "() ERROR: Not found: {$route}.php</h1>");
 
         return self::result(true, $scriptName);
     }
@@ -150,6 +165,20 @@ class Route {
             header("Content-Type: application/json");
             $response = json_encode($response);
         } 
+        // elseif (str_contains($response, "rutex.")) {
+        // else {
+        //     //Agregar el script rutex.js en el head de la pagina
+        //     $doc = new DOMDocument();
+        //     $doc->loadHTML($response);
+
+        //     $head = $doc->getElementsByTagName('head')->item(0);
+        //     if ($head) {
+        //         $script = $doc->createElement('script');
+        //         $script->setAttribute("src", "/rutex.js");
+        //         $head->appendChild($script);
+        //         $response = $doc->saveHTML();
+        //     }
+        // }
 
         return $response;
     }

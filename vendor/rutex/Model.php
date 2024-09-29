@@ -4,17 +4,14 @@ namespace rutex;
 use mysqli;
 use Exception;
 
-const MODEL_VERSION = "2.7.1";
+const MODEL_VERSION = "2.7.2";
 
 class Model {
 
     protected $dbconn;
     protected $cursor;
 
-    //inherited al instanciar clase que hereda de Model, ej: User.php
-    //Por defecto usa el datastore "default", eso se puede modificar en la clase de la entidad
-    //Por ejemplo agregando: protected $datastore = "legacy"; y creando el archivo app/config/datastores/legacy.php
-    protected $dbcfg, $table, $struct=[], $sqlVerbose, $datastore= "default";
+    protected $table, $struct=[], $sqlVerbose;
 
     private $result, $record;
 
@@ -25,32 +22,32 @@ class Model {
 
     static function version() {return MODEL_VERSION;}
 
-    public function __construct() {
-        $this->dbcfg = getConfig("datastores/{$this->datastore}");
-
-        $this->sqlVerbose = $this->dbcfg["SQL_VERBOSE"];
-        $this->connect();
+    public function __construct($datastore="default") {
+        $this->connect($datastore);
     }
 
-    private function connect() {
+    private function connect($datastore) {
         if (is_null($this->dbconn)) {
+            $dbcfg = self::getDatastore($datastore);
             try {
 
-                $this->dbconn = new MySqlI($this->dbcfg["DB_HOST"], 
-                                           $this->dbcfg["DB_USERNAME"],
-                                           $this->dbcfg["DB_PASSWORD"], 
-                                           $this->dbcfg["DB_DATABASE"], 
-                                           $this->dbcfg["DB_PORT"]);
+                $this->dbconn = new MySqlI($dbcfg["DB_HOST"], 
+                                           $dbcfg["DB_USERNAME"],
+                                           $dbcfg["DB_PASSWORD"], 
+                                           $dbcfg["DB_DATABASE"], 
+                                           $dbcfg["DB_PORT"]);
 
-                $this->dbconn->autocommit($this->dbcfg["DB_AUTOCOMMIT"]);
+                $this->dbconn->autocommit($dbcfg["DB_AUTOCOMMIT"]);
 
                 //FORZAR EL USO DE UTF8
                 $this->dbconn->set_charset("utf8mb4");
                 // $this->dbconn->set_charset("utf8");
 
+                $this->sqlVerbose = $dbcfg["SQL_VERBOSE"];
+
             } catch(Exception $e) {
                 //Mostrar mensaje en pantalla (por si están deshabilitados los warnings en php.ihi)
-                die(htmlError("500", "Falló la conexión a la base de datos"));
+                die("<h3>Error 500 - Falló la conexión al datastore $datastore</h3>");
             }
         }
     }
@@ -80,13 +77,7 @@ class Model {
         return $this->result["content"];
     }
 
-    private function BlankFields() {
-        foreach($this->struct as $fieldName => $def) {
-            $this->struct[$fieldName]["_value"] = "";
-        }
-    }
-
-    private function RequiredFields_Verify($data)  {
+    function RequiredFields_Verify($data)  {
         $this->record   = [];
         $requiredFields = [];
 
@@ -104,10 +95,8 @@ class Model {
     }
 
 
-    private function query(string $sqlcmd) {
+    function query(string $sqlcmd) {
         $this->cursor = $this->dbconn->query($sqlcmd);
-
-        $this->BlankFields();
         return $this;
     }
 
@@ -168,15 +157,6 @@ class Model {
 
     function getFirst() {
         $this->current = $this->cursor->fetch_assoc();
-
-        if ($this->current) {
-            //Carga los valores de los campos 
-            foreach($this->struct as $fieldName => $def) {
-                if (isset($this->current[$fieldName]))
-                    $this->struct[$fieldName]["_value"] = $this->current[$fieldName];
-            }
-        }
-
         return $this->current;
     }
 
@@ -217,8 +197,6 @@ class Model {
         $this->condition   = [];
         $this->orCondition = [[$field, $op, $value]];
         $this->orderBy     = "";
-
-        $this->BlankFields();
         
         return $this;
     }
@@ -357,4 +335,19 @@ class Model {
 
         return ($this->success());
     }
+
+    static function getDatastore($datastore) {
+        if  (is_readable("../app/models/datastores/$datastore.php")) return include "../app/models/datastores/$datastore.php";
+        elseif ($datastore=="default") return [
+                                                  "DB_HOST"       => getenv("DB_HOST"),
+                                                  "DB_PORT"       => (int) getenv("DB_PORT"),
+                                                  "DB_DATABASE"   => getenv("DB_DATABASE"),
+                                                  "DB_USERNAME"   => getenv("DB_USERNAME"),
+                                                  "DB_PASSWORD"   => getenv("DB_PASSWORD"),
+                                                  "DB_AUTOCOMMIT" => getenv("DB_AUTOCOMMIT"),
+                                                  "SQL_VERBOSE"   => getenv("SQL_VERBOSE"),
+                                              ];
+        else die("<h3>Datastore no encontrado $datastore");
+    }
+
 }

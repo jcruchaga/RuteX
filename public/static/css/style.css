@@ -6,3 +6,33 @@ body {
 button {
     color: grey;
 }
+
+  
+ p {
+    text-align: justify;
+    line-height: 1.4;
+  }
+  
+  a {
+    outline: none;
+    text-decoration: none;
+    padding: 2px 1px 0;
+  }
+  
+  a:link {
+    color: rgb(172, 171, 222);
+  }
+  
+  a:visited {
+    color: rgb(172, 171, 222);
+  }
+  
+  a:focus,
+  a:hover {
+    border-bottom: 1px solid;
+  }
+  
+  a:active {
+    color: red;
+  }
+  
