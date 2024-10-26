@@ -100,7 +100,7 @@ class Model {
         return $this;
     }
 
-    function getWhereCondition() {
+    function makeWhereCondition() {
         if (count($this->orCondition) > 0) {
             $this->condition[] = $this->orCondition;
             $this->orCondition = [];
@@ -132,7 +132,7 @@ class Model {
     }
 
     private function makeSelectCmd($fields="*", $page=0, $rows=0) {
-        $whereCondition = $this->getWhereCondition();
+        $whereCondition = $this->makeWhereCondition();
 
         if (empty($fields)) $fields = "*";
         else if (is_array($fields)) $fields = implode(",", $fields);
@@ -227,7 +227,7 @@ class Model {
     }
 
     function totPages($rows=0) {
-        $whereCondition = $this->getWhereCondition();
+        $whereCondition = $this->makeWhereCondition();
         if (empty($whereCondition)) $sqlcmd= "select count(*) as reccount from {$this->table}";
         else $sqlcmd= "select count(*) as reccount from {$this->table} where {$whereCondition}";
 
@@ -265,7 +265,7 @@ class Model {
         //verificar que los campos a insertar estén en la estructura
         if (!$this->RequiredFields_Verify($data)) {
             if ($this->sqlVerbose) throw new Exception("ERROR on sql insert => {$this->content()}");
-            return false;
+            return 0;
         }
 
         $sqlcmd= "insert into {$this->table} (" . implode(",", array_keys($this->record)) . ") values (" . trim(str_repeat("?,", count($this->record)), ",") . ")";
@@ -274,21 +274,14 @@ class Model {
             $stmt= $this->dbconn->prepare($sqlcmd);
             $stmt->execute(array_values($this->record));
 
-            //recupera el registro recien guardado
-            $insert_id = $this->dbconn->insert_id;
-
-            $this->getById($insert_id);
-
-            $this->setResult(true, $this->current);
-            return true;
+            return $this->dbconn->insert_id;
 
         } catch (Exception $e) {
             if ($this->sqlVerbose) throw new Exception("ERROR on sql insert => {$e->getMessage()}");
             $this->setResult(false, $e->getMessage());
-            return false;
+            return 0;
         }
     }
-
 
     function update(int $id, array $replacements) {
         $id     = $this->dbconn->real_escape_string($id);
@@ -330,7 +323,9 @@ class Model {
         $id= $this->dbconn->real_escape_string($id);
         $this->query("delete from {$this->table} where id=$id");
 
-        if ($this->affected_rows()>0) $this->setResult(true, "Registro Eliminado OK.");
+        $affected_rows = $this->affected_rows();
+
+        if ($affected_rows>0) $this->setResult(true, "$affected_rows Registros Eliminados OK.");
         else $this->setResult(false, "NO se eliminaron registros");
 
         return ($this->success());

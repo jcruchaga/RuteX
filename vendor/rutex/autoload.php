@@ -34,7 +34,7 @@
     session_start();
 
     //*** RUTAS MAGICAS (se configuran automaticamente aqui) ***
-    require_once "magic_routes.php";
+    require_once "preset_routes.php";
 
     //Carga el archivo rutas de la app
     //Si el usuario redefine las rutas magicas, serán SOBREESCRITAS con el valor indicado en web.php

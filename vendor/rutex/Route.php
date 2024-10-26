@@ -66,7 +66,7 @@ class Route {
                     if (strpos($uri, ":")==0) continue;
 
                     //Pattern para extraer los valores que vienen en la url
-                    $pattern = "#^" . preg_replace("#:([a-zA-Z0-9-_]+)#", "([a-zA-Z0-9-_]+)", $uri) . "$#";
+                    $pattern = "#^" . preg_replace("#:([a-zA-Z0-9-_]+)#", "([a-zA-Z0-9-_\.]+)", $uri) . "$#";
 
                     //extraer los nombres de los parametros
                     preg_match_all("#:([a-zA-Z0-9-_]+)#", $uri, $matches);
@@ -96,10 +96,14 @@ class Route {
             //USUARIO LOGGEADO. User es un array asociativo que viene de conax
             if (isset($_SESSION["user"])) $parm["user"] = $_SESSION["user"];
 
+            //Pasar el metodo a los controladores;
+            $parm["method"] = $method;
+
             $response = self::doCallback($routesEntry, $parm);
         }
         else $response = self::htmlError("404", "not found path:", "($method) " . preg_replace("#\?(.+)#", "", $_SERVER["REQUEST_URI"]));
 
+        header("X-RuteX-Token: " . encryptWS("RuteX"));
         echo $response;
         exit;
     }
@@ -162,7 +166,7 @@ class Route {
 
         //Devuelve el resultado (WEB o API)
         if (is_array($response) || is_object($response)) {
-            header("Content-Type: application/json");
+            header("Content-Type: application/json; charset=utf-8");
             $response = json_encode($response);
         } 
         // elseif (str_contains($response, "rutex.")) {

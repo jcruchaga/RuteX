@@ -9,8 +9,8 @@
     <title>RuteX</title>
 </head>
 <body>
-    <h1>Powered by Rutex v05.05</h1><hr>
+    <h1>Powered by Rutex v05.06</h1><hr>
     <h3>RutexCorePath=<?=strtolower(__DIR__)?><br><br>
-    <a href="/">Return to Home Page</a>
+    <a href="#" onclick="history.back()">Back</a>
 </body>
 </html>

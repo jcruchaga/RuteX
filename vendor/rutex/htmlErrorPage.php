@@ -50,7 +50,7 @@
     <div class="error-container">
         <div class="error-code"><?=$code?></div>
         <div class="error-message"><?="$msg $uri"?></div>
-        <a href="/" class="home-link">Volver a la página principal</a>
+        <a href="#" onclick="history.back()" class="home-link">Volver</a>
     </div>
 </body>
 </html>

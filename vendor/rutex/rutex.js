@@ -1,5 +1,23 @@
 console.log("RuteX.js cargado con éxito");
 
+  //cargador de pwa (tambien se puede agregar al final del body)
+  const pwa = document.createElement("link");
+  pwa.rel   = "manifest";
+  pwa.href  = "/static/pwa/manifest.json";
+  document.head.appendChild(pwa);
+
+  //registrar el worker
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register('/static/pwa/service-worker.js').then(function(registration) {
+        console.log('Service Worker registrado con éxito:', registration);
+      }, function(error) {
+        console.log('Service Worker fallo en el registro:', error);
+      });
+    });
+  }
+
+//Funciones de RuteX
 let rutex = {
     login: () => {
 

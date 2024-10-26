@@ -12,19 +12,23 @@ class Http {
     static private $actual_url = null;
     static private $buffer;
 
-    static function get(string $url, array $data=null, array $headers=null, int $timeout=3):bool {
+    static function get(string $url, array $data=null, array $headers=null, int $timeout=3):array {
         return self::exec("GET", $url, $data, $headers, $timeout);
     }
 
-    static function post(string $url, array $data=null, array $headers=null, int $timeout=3):bool {
+    static function post(string $url, array $data=null, array $headers=null, int $timeout=3):array {
         return self::exec("POST", $url, $data, $headers, $timeout);
     }
 
-    static function put(string $url, array $data=null, array $headers=null, int $timeout=3):bool {
+    static function put(string $url, array $data=null, array $headers=null, int $timeout=3):array {
         return self::exec("PUT", $url, $data, $headers, $timeout);
     }
 
-    static function exec(string $method, string $url, array $data=null, array $headers=null, int $timeout=3):bool {
+    static function delete(string $url, array $data=null, array $headers=null, int $timeout=3):array {
+        return self::exec("DELETE", $url, $data, $headers, $timeout);
+    }
+
+    static function exec(string $method, string $url, array $data=null, array $headers=null, int $timeout=3):array {
         if (!self::$ch) {
             self::$ch = curl_init();
             curl_setopt(self::$ch, CURLOPT_RETURNTRANSFER, true);
@@ -50,25 +54,34 @@ class Http {
             curl_setopt(self::$ch, CURLOPT_URL, $url);
         }
 
-        if ($headers) curl_setopt(self::$ch, CURLOPT_HTTPHEADER, $headers);
+        $headers[] = "X-RuteX-TS: " . time();
+        curl_setopt(self::$ch, CURLOPT_HTTPHEADER, $headers);
         curl_setopt(self::$ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
 
-        self::$buffer = curl_exec(self::$ch); 
+        self::$buffer = curl_exec(self::$ch);
+        $success      = false;
+        
+        if (curl_errno(self::$ch)) self::$buffer = curl_error(self::$ch);
+        else $success = true;
 
-        return !curl_errno(self::$ch); 
+        return self::result($success, self::$buffer);
     }
 
     static function close() {
         if (self::$ch) curl_close(self::$ch);
     }
 
-    static function error() {
-        return curl_error(self::$ch);
+    static function error():array {
+        return ["erno" => curl_errno(self::$ch), "errmsg" => curl_error(self::$ch)];
     }
 
-    static function response(bool $decode=false, bool $assoc=false) {
-        if ($decode) return json_decode(self::$buffer, $assoc);
+    static function response(bool $decode=false) {
+        if ($decode) return json_decode(self::$buffer, true);
         else return self::$buffer;
+    }
+
+    static private function result($success, $content) {
+        return ["success" => $success, "content" => $content];
     }
 
 }
