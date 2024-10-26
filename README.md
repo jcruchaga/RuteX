@@ -1,10 +1,4 @@
-RRRRR  U    U TTTTTTT  EEEEEE X    X 
-R    R U    U    T     E       X  X  
-RRRRR  U    U    T     EEEEEE   XX   
-R  R   U    U    T     E       X  X  
-R   RR  UUUU     T     EEEEEE X    X 
-
-Es un mini-framework PHP
+RuteX es un mini-framework PHP
 
 Para facilitar los primeros pasos con desarrollo web con php.
 Este framework resuelve: El ruteo de uris y el acceso a datos.
